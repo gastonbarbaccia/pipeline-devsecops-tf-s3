@@ -9,3 +9,4 @@ variable "state_bucket" {
 variable "db_password" {
   sensitive = true
 }
+

@@ -6,56 +6,48 @@ on:
 
 env:
   BUCKET_NAME: "mi-terraform-state-bucket"
+  TF_STATE_KEY: "terraform.tfstate"
+  AWS_REGION: "us-east-1"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v3
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Ensure S3 bucket exists
-      run: |
-        if aws s3 ls "s3://${{ env.BUCKET_NAME }}" 2>&1 | grep -q 'NoSuchBucket'
-        then
-          echo "Bucket no existe, creando..."
-          aws s3 mb "s3://${{ env.BUCKET_NAME }}"
-        else
-          echo "Bucket ya existe."
-        fi
+      - name: Ensure S3 bucket exists
+        run: |
+          if ! aws s3 ls "s3://${{ env.BUCKET_NAME }}" 2>&1 >/dev/null; then
+            echo "Bucket no existe, creando..."
+            aws s3 mb "s3://${{ env.BUCKET_NAME }}"
+          else
+            echo "Bucket ya existe."
+          fi
 
-    - name: Download existing backend state (if exists)
-      run: |
-        if aws s3 cp "s3://${{ env.BUCKET_NAME }}/terraform.tfstate" terraform/terraform.tfstate 2>/dev/null
-        then
-          echo "State descargado."
-        else
-          echo "No existe estado previo."
-        fi
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
-    - name: Install Terraform
-      uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init (with S3 backend)
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.BUCKET_NAME }}" \
+            -backend-config="key=${{ env.TF_STATE_KEY }}" \
+            -backend-config="region=${{ env.AWS_REGION }}"
 
-    - name: Terraform Init
-      working-directory: terraform
-      run: terraform init
+      - name: Terraform Plan (ALL .tf files)
+        working-directory: terraform
+        run: terraform plan
 
-    - name: Terraform Plan
-      working-directory: terraform
-      run: terraform plan
-
-    - name: Terraform Apply
-      working-directory: terraform
-      run: terraform apply -auto-approve
-
-    - name: Upload new state to S3
-      run: |
-        aws.s3 cp terraform/terraform.tfstate "s3://${{ env.BUCKET_NAME }}/terraform.tfstate"
+      - name: Terraform Apply (ALL .tf files)
+        working-directory: terraform
+        run: terraform apply -auto-approve

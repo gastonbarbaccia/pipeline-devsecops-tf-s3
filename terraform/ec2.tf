@@ -3,8 +3,8 @@ data "aws_vpc" "default" {
 }
 
 resource "aws_security_group" "ec2_sg" {
-  name        = "ec2-sg"
-  vpc_id      = data.aws_vpc.default.id
+  name   = "ec2-sg"
+  vpc_id = data.aws_vpc.default.id
 
   ingress {
     from_port   = 22
@@ -14,9 +14,9 @@ resource "aws_security_group" "ec2_sg" {
   }
 
   ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
     security_groups = [aws_security_group.db_sg.id]
   }
 
@@ -29,8 +29,8 @@ resource "aws_security_group" "ec2_sg" {
 }
 
 resource "aws_instance" "app" {
-  ami           = "ami-0c02fb55956c7d316"
-  instance_type = "t2.micro"
+  ami                    = "ami-0c02fb55956c7d316"
+  instance_type          = "t2.micro"
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   tags = {
