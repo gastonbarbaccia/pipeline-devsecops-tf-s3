@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 env:
-  BUCKET_NAME: "mi-terraform-state-bucket"
+  BUCKET_NAME: "mi-terraform-state-bucket-123456"
   TF_STATE_KEY: "terraform.tfstate"
   AWS_REGION: "us-east-1"
 
